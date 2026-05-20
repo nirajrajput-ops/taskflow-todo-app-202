@@ -45,6 +45,14 @@ export const Dashboard: React.FC = () => {
       subtasks: [],
     });
 
+    if (typeof pendo !== 'undefined') {
+      pendo.track('task_quick_added', {
+        titleLength: quickTaskTitle.trim().length,
+        defaultCategoryId: categories[0]?.id || 'other',
+        defaultPriority: 'medium',
+      });
+    }
+
     setQuickTaskTitle('');
     showToast('Task created successfully!', 'success');
   };
@@ -59,7 +67,18 @@ export const Dashboard: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const taskToDelete = tasks.find(t => t.id === deleteTaskId);
       deleteTask(deleteTaskId);
+      if (typeof pendo !== 'undefined' && taskToDelete) {
+        pendo.track('task_deleted', {
+          taskId: deleteTaskId,
+          taskStatus: taskToDelete.status,
+          priority: taskToDelete.priority,
+          categoryId: taskToDelete.categoryId,
+          hadSubtasks: taskToDelete.subtasks.length > 0,
+          deletionSource: 'dashboard',
+        });
+      }
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);
     }
