@@ -192,6 +192,22 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const toggleSubtask = (taskId: string, subtaskId: string) => {
+    const task = state.tasks.find(t => t.id === taskId);
+    const subtask = task?.subtasks.find(s => s.id === subtaskId);
+
+    if (task && subtask && !subtask.completed) {
+      if (typeof pendo !== 'undefined') {
+        const completedSubtasks = task.subtasks.filter(s => s.completed).length + 1;
+        pendo.track('subtask_completed', {
+          taskId,
+          subtaskId,
+          totalSubtasks: task.subtasks.length,
+          completedSubtasks,
+          allSubtasksNowComplete: completedSubtasks === task.subtasks.length,
+        });
+      }
+    }
+
     dispatch({ type: 'TOGGLE_SUBTASK', payload: { taskId, subtaskId } });
   };
 

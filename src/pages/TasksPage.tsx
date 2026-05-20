@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
@@ -110,10 +110,69 @@ export const TasksPage: React.FC = () => {
     return result;
   }, [tasks, filter, sort]);
 
+  // Track search events (debounced)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!filter.search) return;
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_search_executed', {
+          searchQuery: filter.search.substring(0, 100),
+          statusFilter: filter.status,
+          priorityFilter: filter.priority,
+          categoryFilter: filter.categoryId,
+          sortBy: sort,
+          resultsCount: filteredTasks.length,
+          totalTasks: tasks.length,
+        });
+      }
+    }, 500);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [filter.search, filter.status, filter.priority, filter.categoryId, sort, filteredTasks.length, tasks.length]);
+
+  // Track filter/sort changes
+  const isInitialRender = useRef(true);
+  useEffect(() => {
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      return;
+    }
+    if (typeof pendo !== 'undefined') {
+      pendo.track('task_filters_applied', {
+        statusFilter: filter.status,
+        priorityFilter: filter.priority,
+        categoryFilter: filter.categoryId,
+        sortBy: sort,
+        resultsCount: filteredTasks.length,
+        totalTasks: tasks.length,
+      });
+    }
+  }, [filter.status, filter.priority, filter.categoryId, sort]);
+
   const handleToggleStatus = (taskId: string) => {
-    toggleTaskStatus(taskId);
     const task = tasks.find(t => t.id === taskId);
+    toggleTaskStatus(taskId);
+
     if (task?.status === 'pending') {
+      if (typeof pendo !== 'undefined') {
+        const completedSubtaskCount = task.subtasks.filter(s => s.completed).length;
+        const daysSinceCreation = Math.floor(
+          (Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        pendo.track('task_completed', {
+          taskId: task.id,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          hadDueDate: !!task.dueDate,
+          wasOverdue: !!(task.dueDate && new Date(task.dueDate) < new Date()),
+          subtaskCount: task.subtasks.length,
+          completedSubtaskCount,
+          daysSinceCreation,
+        });
+      }
       showToast('Task completed!', 'success');
     }
   };
