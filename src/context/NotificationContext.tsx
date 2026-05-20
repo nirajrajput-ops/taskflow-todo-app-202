@@ -74,6 +74,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   };
 
   const markAllAsRead = () => {
+    if (typeof pendo !== 'undefined') {
+      pendo.track('all_notifications_marked_read', {
+        total_notifications: notifications.length,
+        unread_count_before: notifications.filter(n => !n.read).length,
+      });
+    }
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
