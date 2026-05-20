@@ -74,10 +74,25 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   };
 
   const markAllAsRead = () => {
+    if (typeof pendo !== 'undefined') {
+      const unread = notifications.filter(n => !n.read).length;
+      pendo.track('all_notifications_marked_read', {
+        notificationCount: notifications.length,
+        unreadCount: unread,
+      });
+    }
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
   const clearNotifications = () => {
+    if (typeof pendo !== 'undefined') {
+      const unread = notifications.filter(n => !n.read).length;
+      pendo.track('all_notifications_cleared', {
+        notificationCount: notifications.length,
+        unreadCount: unread,
+        readCount: notifications.length - unread,
+      });
+    }
     setNotifications([]);
   };
 
@@ -105,6 +120,16 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
               'reminder'
             );
             markReminderTriggered(task.id);
+            if (typeof pendo !== 'undefined') {
+              pendo.track('reminder_triggered', {
+                taskId: task.id,
+                taskTitle: task.title,
+                reminderSetting: task.reminder,
+                dueDate: task.dueDate,
+                dueTime: task.dueTime,
+                browserNotificationPermission: 'Notification' in window ? Notification.permission : 'unsupported',
+              });
+            }
           }
 
           // Check for overdue (only notify once per task per session)
@@ -119,6 +144,16 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 `Task "${task.title}" is overdue!`,
                 'overdue'
               );
+              if (typeof pendo !== 'undefined') {
+                pendo.track('overdue_notification_triggered', {
+                  taskId: task.id,
+                  taskTitle: task.title,
+                  dueDate: task.dueDate,
+                  dueTime: task.dueTime,
+                  priority: task.priority,
+                  categoryId: task.categoryId,
+                });
+              }
             }
           }
         }
