@@ -57,6 +57,35 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleToggleStatus = () => {
+    if (typeof pendo !== 'undefined') {
+      if (task.status === 'pending') {
+        const completedSubtaskCount = task.subtasks.filter(s => s.completed).length;
+        const daysSinceCreation = Math.floor(
+          (Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        pendo.track('task_completed', {
+          taskId: task.id,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          hadDueDate: !!task.dueDate,
+          wasOverdue: overdue,
+          subtaskCount: task.subtasks.length,
+          completedSubtaskCount,
+          daysSinceCreation,
+        });
+      } else {
+        const daysSinceCompletion = task.completedAt
+          ? Math.floor((Date.now() - new Date(task.completedAt).getTime()) / (1000 * 60 * 60 * 24))
+          : 0;
+        pendo.track('task_reopened', {
+          taskId: task.id,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          daysSinceCompletion,
+        });
+      }
+    }
+
     toggleTaskStatus(task.id);
     showToast(
       task.status === 'pending' ? 'Task completed!' : 'Task marked as pending',
@@ -69,6 +98,21 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleDelete = () => {
+    if (typeof pendo !== 'undefined') {
+      const daysSinceCreation = Math.floor(
+        (Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      pendo.track('task_deleted', {
+        taskId: task.id,
+        taskStatus: task.status,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hadDueDate: !!task.dueDate,
+        subtaskCount: task.subtasks.length,
+        daysSinceCreation,
+      });
+    }
+
     deleteTask(task.id);
     showToast('Task deleted', 'success');
     navigate('/tasks');
