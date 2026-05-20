@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
@@ -109,6 +109,37 @@ export const TasksPage: React.FC = () => {
 
     return result;
   }, [tasks, filter, sort]);
+
+  // Debounced tracking of search/filter usage
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const hasActiveFilters = filter.status !== 'all' || filter.priority !== 'all' || filter.categoryId !== 'all' || !!filter.search;
+    if (!hasActiveFilters) return;
+
+    const activeFilterCount = [filter.status !== 'all', filter.priority !== 'all', filter.categoryId !== 'all', !!filter.search].filter(Boolean).length;
+
+    const timeout = setTimeout(() => {
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_search_executed', {
+          search_query: filter.search ? filter.search.substring(0, 100) : '',
+          status_filter: filter.status,
+          priority_filter: filter.priority,
+          category_filter: filter.categoryId,
+          sort_by: sort,
+          results_count: filteredTasks.length,
+          has_search_text: !!filter.search,
+          active_filter_count: activeFilterCount,
+        });
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [filter, sort, filteredTasks.length]);
 
   const handleToggleStatus = (taskId: string) => {
     toggleTaskStatus(taskId);

@@ -45,6 +45,14 @@ export const Dashboard: React.FC = () => {
       subtasks: [],
     });
 
+    if (typeof pendo !== 'undefined') {
+      pendo.track('quick_task_created', {
+        title_length: quickTaskTitle.trim().length,
+        default_priority: 'medium',
+        default_categoryId: categories[0]?.id || 'other',
+      });
+    }
+
     setQuickTaskTitle('');
     showToast('Task created successfully!', 'success');
   };
