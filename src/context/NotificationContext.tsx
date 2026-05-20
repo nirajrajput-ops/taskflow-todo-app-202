@@ -74,6 +74,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   };
 
   const markAllAsRead = () => {
+    if (typeof pendo !== 'undefined') {
+      pendo.track('all_notifications_marked_read', {
+        notificationCount: notifications.length,
+        unreadCount: notifications.filter(n => !n.read).length,
+      });
+    }
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
@@ -88,6 +94,11 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     const permission = await Notification.requestPermission();
     setPermissionStatus(permission);
+    if (permission === 'granted' && typeof pendo !== 'undefined') {
+      pendo.track('notification_permission_granted', {
+        permissionStatus: permission,
+      });
+    }
     return permission === 'granted';
   };
 
@@ -104,6 +115,18 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
               `Reminder: Task "${task.title}" is due soon!`,
               'reminder'
             );
+            if (typeof pendo !== 'undefined') {
+              const dueDateTime = task.dueTime
+                ? new Date(`${task.dueDate}T${task.dueTime}`)
+                : new Date(task.dueDate!);
+              pendo.track('reminder_triggered', {
+                taskId: task.id,
+                taskTitle: task.title.substring(0, 100),
+                reminderInterval: task.reminder,
+                minutesBeforeDue: Math.round((dueDateTime.getTime() - Date.now()) / 60000),
+                notificationType: 'reminder',
+              });
+            }
             markReminderTriggered(task.id);
           }
 
@@ -119,6 +142,18 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 `Task "${task.title}" is overdue!`,
                 'overdue'
               );
+              if (typeof pendo !== 'undefined') {
+                const dueDateTime = task.dueTime
+                  ? new Date(`${task.dueDate}T${task.dueTime}`)
+                  : new Date(task.dueDate!);
+                pendo.track('overdue_notification_triggered', {
+                  taskId: task.id,
+                  taskTitle: task.title.substring(0, 100),
+                  priority: task.priority,
+                  categoryId: task.categoryId,
+                  minutesOverdue: Math.round((Date.now() - dueDateTime.getTime()) / 60000),
+                });
+              }
             }
           }
         }
