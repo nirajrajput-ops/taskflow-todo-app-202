@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
@@ -109,6 +109,57 @@ export const TasksPage: React.FC = () => {
 
     return result;
   }, [tasks, filter, sort]);
+
+  // Debounced tracking of search usage
+  const searchTrackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const filterTrackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialMount = useRef(true);
+
+  // Track search queries with 500ms debounce
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    if (!filter.search) return;
+
+    if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current);
+    searchTrackTimer.current = setTimeout(() => {
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_search_executed', {
+          searchQuery: filter.search.substring(0, 100),
+          resultsCount: filteredTasks.length,
+          statusFilter: filter.status,
+          priorityFilter: filter.priority,
+          categoryFilter: filter.categoryId,
+          sortBy: sort,
+        });
+      }
+    }, 500);
+
+    return () => { if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current); };
+  }, [filter.search]);
+
+  // Track filter/sort changes with 500ms debounce
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (filterTrackTimer.current) clearTimeout(filterTrackTimer.current);
+    filterTrackTimer.current = setTimeout(() => {
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_filters_applied', {
+          statusFilter: filter.status,
+          priorityFilter: filter.priority,
+          categoryFilter: filter.categoryId,
+          sortBy: sort,
+          resultsCount: filteredTasks.length,
+          totalTaskCount: tasks.length,
+        });
+      }
+    }, 500);
+
+    return () => { if (filterTrackTimer.current) clearTimeout(filterTrackTimer.current); };
+  }, [filter.status, filter.priority, filter.categoryId, sort]);
 
   const handleToggleStatus = (taskId: string) => {
     toggleTaskStatus(taskId);
