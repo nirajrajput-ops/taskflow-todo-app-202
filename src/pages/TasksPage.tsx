@@ -37,7 +37,17 @@ export const TasksPage: React.FC = () => {
     const currentSort = searchParams.get('sort');
     if (currentSort && currentSort !== 'createdAt') params.set('sort', currentSort);
     setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams]);
+    if (typeof pendo !== 'undefined') {
+      pendo.track('task_filters_applied', {
+        statusFilter: newFilter.status,
+        priorityFilter: newFilter.priority,
+        categoryFilter: newFilter.categoryId,
+        sortBy: (currentSort as string) || 'createdAt',
+        resultsCount: tasks.length,
+        totalTaskCount: tasks.length,
+      });
+    }
+  }, [searchParams, setSearchParams, tasks.length]);
 
   const setSort = useCallback((newSort: TaskSort) => {
     const params = new URLSearchParams(searchParams);
@@ -82,6 +92,16 @@ export const TasksPage: React.FC = () => {
           t.title.toLowerCase().includes(searchLower) ||
           t.description.toLowerCase().includes(searchLower)
       );
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_search_executed', {
+          query: filter.search.substring(0, 100),
+          resultsCount: result.length,
+          totalTaskCount: tasks.length,
+          activeStatusFilter: filter.status,
+          activePriorityFilter: filter.priority,
+          activeCategoryFilter: filter.categoryId,
+        });
+      }
     }
 
     // Sort
@@ -111,15 +131,42 @@ export const TasksPage: React.FC = () => {
   }, [tasks, filter, sort]);
 
   const handleToggleStatus = (taskId: string) => {
-    toggleTaskStatus(taskId);
     const task = tasks.find(t => t.id === taskId);
+    toggleTaskStatus(taskId);
     if (task?.status === 'pending') {
+      if (typeof pendo !== 'undefined') {
+        const completedSubtasks = task.subtasks.filter(s => s.completed).length;
+        pendo.track('task_completed', {
+          taskId: task.id,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          hadDueDate: !!task.dueDate,
+          wasOverdue: isOverdue(task.dueDate, task.dueTime, task.status),
+          subtaskCount: task.subtasks.length,
+          completedSubtaskCount: completedSubtasks,
+          timeToCompletionMs: new Date().getTime() - new Date(task.createdAt).getTime(),
+          source: 'task_list',
+        });
+      }
       showToast('Task completed!', 'success');
     }
   };
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const task = tasks.find(t => t.id === deleteTaskId);
+      if (typeof pendo !== 'undefined' && task) {
+        pendo.track('task_deleted', {
+          taskId: task.id,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          status: task.status,
+          hadDueDate: !!task.dueDate,
+          wasOverdue: isOverdue(task.dueDate, task.dueTime, task.status),
+          subtaskCount: task.subtasks.length,
+          source: 'task_list',
+        });
+      }
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);
