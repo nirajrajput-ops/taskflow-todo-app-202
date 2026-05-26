@@ -38,15 +38,54 @@ export const TaskFormPage: React.FC = () => {
     taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderTriggered'>
   ) => {
     if (isEdit && existingTask) {
+      const fieldsChanged: string[] = [];
+      if (taskData.title !== existingTask.title) fieldsChanged.push('title');
+      if (taskData.description !== existingTask.description) fieldsChanged.push('description');
+      if (taskData.priority !== existingTask.priority) fieldsChanged.push('priority');
+      if (taskData.categoryId !== existingTask.categoryId) fieldsChanged.push('categoryId');
+      if (taskData.dueDate !== existingTask.dueDate) fieldsChanged.push('dueDate');
+      if (taskData.dueTime !== existingTask.dueTime) fieldsChanged.push('dueTime');
+      if (taskData.reminder !== existingTask.reminder) fieldsChanged.push('reminder');
+
       updateTask({
         ...existingTask,
         ...taskData,
         updatedAt: new Date().toISOString(),
       });
+
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_updated', {
+          taskId: existingTask.id,
+          priority: taskData.priority,
+          categoryId: taskData.categoryId,
+          hasDueDate: !!taskData.dueDate,
+          hasDueTime: !!taskData.dueTime,
+          reminder: taskData.reminder,
+          subtaskCount: taskData.subtasks.length,
+          hasDescription: !!taskData.description,
+          fieldsChanged: fieldsChanged.join(','),
+        });
+      }
+
       showToast('Task updated successfully!', 'success');
       navigate(`/tasks/${existingTask.id}`);
     } else {
       addTask(taskData);
+
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_created', {
+          title: taskData.title,
+          priority: taskData.priority,
+          categoryId: taskData.categoryId,
+          hasDueDate: !!taskData.dueDate,
+          hasDueTime: !!taskData.dueTime,
+          reminder: taskData.reminder,
+          subtaskCount: taskData.subtasks.length,
+          source: 'task_form',
+          hasDescription: !!taskData.description,
+        });
+      }
+
       showToast('Task created successfully!', 'success');
       navigate('/tasks');
     }

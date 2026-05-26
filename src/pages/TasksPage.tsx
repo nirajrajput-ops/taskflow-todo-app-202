@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
@@ -109,6 +109,40 @@ export const TasksPage: React.FC = () => {
 
     return result;
   }, [tasks, filter, sort]);
+
+  // Debounced Pendo track for search/filter usage
+  const isInitialRender = useRef(true);
+  useEffect(() => {
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      return;
+    }
+
+    const hasActiveFilters =
+      filter.status !== 'all' ||
+      filter.priority !== 'all' ||
+      filter.categoryId !== 'all' ||
+      !!filter.search;
+
+    if (!hasActiveFilters) return;
+
+    const timeout = setTimeout(() => {
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_search_executed', {
+          searchQuery: filter.search || '',
+          statusFilter: filter.status,
+          priorityFilter: filter.priority,
+          categoryFilter: filter.categoryId,
+          sortBy: sort,
+          resultsCount: filteredTasks.length,
+          totalTaskCount: tasks.length,
+          hasActiveFilters,
+        });
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [filter, sort, filteredTasks.length, tasks.length]);
 
   const handleToggleStatus = (taskId: string) => {
     toggleTaskStatus(taskId);
