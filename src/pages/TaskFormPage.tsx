@@ -37,8 +37,6 @@ export const TaskFormPage: React.FC = () => {
   const handleSubmit = (
     taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderTriggered'>
   ) => {
-    const category = categories.find(c => c.id === taskData.categoryId);
-
     if (isEdit && existingTask) {
       updateTask({
         ...existingTask,
@@ -48,17 +46,14 @@ export const TaskFormPage: React.FC = () => {
 
       if (typeof pendo !== 'undefined') {
         pendo.track('task_updated', {
-          task_id: existingTask.id,
           priority: taskData.priority,
           categoryId: taskData.categoryId,
-          category_name: category?.name || '',
-          has_due_date: !!taskData.dueDate,
-          has_due_time: !!taskData.dueTime,
-          reminder_setting: taskData.reminder,
-          subtask_count: taskData.subtasks.length,
-          priority_changed: existingTask.priority !== taskData.priority,
-          category_changed: existingTask.categoryId !== taskData.categoryId,
-          due_date_changed: existingTask.dueDate !== taskData.dueDate,
+          hasDueDate: !!taskData.dueDate,
+          hasDueTime: !!taskData.dueTime,
+          reminder: taskData.reminder,
+          subtaskCount: taskData.subtasks.length,
+          hasDescription: !!taskData.description,
+          taskId: existingTask.id,
         });
       }
 
@@ -69,16 +64,13 @@ export const TaskFormPage: React.FC = () => {
 
       if (typeof pendo !== 'undefined') {
         pendo.track('task_created', {
-          title_length: taskData.title.length,
           priority: taskData.priority,
           categoryId: taskData.categoryId,
-          category_name: category?.name || '',
-          has_due_date: !!taskData.dueDate,
-          has_due_time: !!taskData.dueTime,
-          reminder_setting: taskData.reminder,
-          subtask_count: taskData.subtasks.length,
-          has_description: !!taskData.description,
-          source: 'task_form',
+          hasDueDate: !!taskData.dueDate,
+          hasDueTime: !!taskData.dueTime,
+          reminder: taskData.reminder,
+          subtaskCount: taskData.subtasks.length,
+          hasDescription: !!taskData.description,
         });
       }
 

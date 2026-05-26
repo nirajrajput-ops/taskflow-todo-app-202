@@ -76,8 +76,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   const markAllAsRead = () => {
     if (typeof pendo !== 'undefined') {
       pendo.track('all_notifications_marked_read', {
-        total_notifications: notifications.length,
-        unread_count_before: notifications.filter(n => !n.read).length,
+        totalNotificationCount: notifications.length,
+        unreadCount: notifications.filter(n => !n.read).length,
       });
     }
 
@@ -87,8 +87,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   const clearNotifications = () => {
     if (typeof pendo !== 'undefined') {
       pendo.track('notifications_cleared', {
-        notifications_count: notifications.length,
-        unread_count: notifications.filter(n => !n.read).length,
+        notificationCount: notifications.length,
+        unreadCount: notifications.filter(n => !n.read).length,
       });
     }
 
@@ -100,8 +100,15 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       return false;
     }
 
+    const previousStatus = Notification.permission;
     const permission = await Notification.requestPermission();
     setPermissionStatus(permission);
+    if (typeof pendo !== 'undefined') {
+      pendo.track('browser_notification_permission_requested', {
+        permissionResult: permission,
+        previousPermissionStatus: previousStatus,
+      });
+    }
     return permission === 'granted';
   };
 
@@ -122,14 +129,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
             if (typeof pendo !== 'undefined') {
               pendo.track('reminder_triggered', {
-                task_id: task.id,
-                task_title: task.title,
-                reminder_type: task.reminder,
-                due_date: task.dueDate || '',
-                due_time: task.dueTime || '',
-                priority: task.priority,
-                categoryId: task.categoryId,
-                notification_permission: permissionStatus,
+                taskId: task.id,
+                taskTitle: task.title,
+                reminderType: task.reminder,
+                dueDate: task.dueDate || '',
+                dueTime: task.dueTime || '',
+                browserNotificationPermission: 'Notification' in window ? Notification.permission : 'unsupported',
               });
             }
           }
@@ -148,16 +153,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
               );
 
               if (typeof pendo !== 'undefined') {
-                const dueDateTime = task.dueDate ? new Date(task.dueDate + (task.dueTime ? 'T' + task.dueTime : '')).getTime() : 0;
-                const hoursOverdue = dueDateTime ? Math.round((Date.now() - dueDateTime) / (1000 * 60 * 60)) : 0;
-                pendo.track('overdue_notification_triggered', {
-                  task_id: task.id,
-                  task_title: task.title,
-                  due_date: task.dueDate || '',
-                  due_time: task.dueTime || '',
+                pendo.track('overdue_task_detected', {
+                  taskId: task.id,
+                  taskTitle: task.title,
+                  dueDate: task.dueDate || '',
+                  dueTime: task.dueTime || '',
                   priority: task.priority,
                   categoryId: task.categoryId,
-                  hours_overdue: hoursOverdue,
                 });
               }
             }

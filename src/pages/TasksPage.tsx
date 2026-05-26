@@ -110,36 +110,56 @@ export const TasksPage: React.FC = () => {
     return result;
   }, [tasks, filter, sort]);
 
-  // Debounced tracking of search/filter usage
+  // Debounced tracking of search usage
+  const searchTrackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const filterTrackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialMount = useRef(true);
+
+  // Track search queries with 500ms debounce
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    if (!filter.search) return;
+
+    if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current);
+    searchTrackTimer.current = setTimeout(() => {
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_search_executed', {
+          searchQuery: filter.search.substring(0, 100),
+          resultsCount: filteredTasks.length,
+          statusFilter: filter.status,
+          priorityFilter: filter.priority,
+          categoryFilter: filter.categoryId,
+          sortBy: sort,
+        });
+      }
+    }, 500);
+
+    return () => { if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current); };
+  }, [filter.search]);
+
+  // Track filter/sort changes with 500ms debounce
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
 
-    const hasActiveFilters = filter.status !== 'all' || filter.priority !== 'all' || filter.categoryId !== 'all' || !!filter.search;
-    if (!hasActiveFilters) return;
-
-    const activeFilterCount = [filter.status !== 'all', filter.priority !== 'all', filter.categoryId !== 'all', !!filter.search].filter(Boolean).length;
-
-    const timeout = setTimeout(() => {
+    if (filterTrackTimer.current) clearTimeout(filterTrackTimer.current);
+    filterTrackTimer.current = setTimeout(() => {
       if (typeof pendo !== 'undefined') {
-        pendo.track('task_search_executed', {
-          search_query: filter.search ? filter.search.substring(0, 100) : '',
-          status_filter: filter.status,
-          priority_filter: filter.priority,
-          category_filter: filter.categoryId,
-          sort_by: sort,
-          results_count: filteredTasks.length,
-          has_search_text: !!filter.search,
-          active_filter_count: activeFilterCount,
+        pendo.track('task_filters_applied', {
+          statusFilter: filter.status,
+          priorityFilter: filter.priority,
+          categoryFilter: filter.categoryId,
+          sortBy: sort,
+          resultsCount: filteredTasks.length,
+          totalTaskCount: tasks.length,
         });
       }
     }, 500);
 
-    return () => clearTimeout(timeout);
-  }, [filter, sort, filteredTasks.length]);
+    return () => { if (filterTrackTimer.current) clearTimeout(filterTrackTimer.current); };
+  }, [filter.status, filter.priority, filter.categoryId, sort]);
 
   const handleToggleStatus = (taskId: string) => {
     toggleTaskStatus(taskId);
