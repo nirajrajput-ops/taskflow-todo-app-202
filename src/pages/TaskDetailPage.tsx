@@ -57,28 +57,6 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleToggleStatus = () => {
-    if (typeof pendo !== 'undefined') {
-      if (task.status === 'pending') {
-        pendo.track('task_completed', {
-          taskId: task.id,
-          priority: task.priority,
-          categoryId: task.categoryId,
-          hadDueDate: !!task.dueDate,
-          wasOverdue: overdue,
-          subtaskCount: task.subtasks.length,
-          completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
-          source: 'task_detail',
-        });
-      } else {
-        pendo.track('task_reopened', {
-          taskId: task.id,
-          priority: task.priority,
-          categoryId: task.categoryId,
-          source: 'task_detail',
-        });
-      }
-    }
-
     toggleTaskStatus(task.id);
     showToast(
       task.status === 'pending' ? 'Task completed!' : 'Task marked as pending',
