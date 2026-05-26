@@ -104,7 +104,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const permission = await Notification.requestPermission();
     setPermissionStatus(permission);
     if (typeof pendo !== 'undefined') {
-      pendo.track('browser_notification_permission_requested', {
+      pendo.track('notification_permission_requested', {
         permissionResult: permission,
         previousPermissionStatus: previousStatus,
       });
@@ -153,7 +153,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
               );
 
               if (typeof pendo !== 'undefined') {
-                pendo.track('overdue_task_detected', {
+                pendo.track('overdue_notification_triggered', {
                   taskId: task.id,
                   taskTitle: task.title,
                   dueDate: task.dueDate || '',

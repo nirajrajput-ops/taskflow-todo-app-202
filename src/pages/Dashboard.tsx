@@ -46,7 +46,7 @@ export const Dashboard: React.FC = () => {
     });
 
     if (typeof pendo !== 'undefined') {
-      pendo.track('task_quick_added', {
+      pendo.track('quick_task_created', {
         titleLength: quickTaskTitle.trim().length,
         defaultCategoryId: categories[0]?.id || 'other',
       });
