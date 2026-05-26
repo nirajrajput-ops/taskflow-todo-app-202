@@ -209,6 +209,22 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
       }
     }
+    if (task && typeof pendo !== 'undefined') {
+      const previousStatus = task.status;
+      const newStatus = previousStatus === 'pending' ? 'completed' : 'pending';
+      const completedSubtaskCount = task.subtasks.filter(s => s.completed).length;
+      pendo.track('task_status_toggled', {
+        taskId,
+        previousStatus,
+        newStatus,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hadDueDate: !!task.dueDate,
+        wasOverdue: !!task.dueDate && new Date(task.dueDate) < new Date(),
+        subtaskCount: task.subtasks.length,
+        completedSubtaskCount,
+      });
+    }
     dispatch({ type: 'TOGGLE_TASK_STATUS', payload: taskId });
   };
 
